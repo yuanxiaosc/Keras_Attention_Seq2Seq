@@ -86,11 +86,13 @@ les états-unis est jamais belle en mars , et il est relaxant habituellement en 
 [220, 209, 329, 172, 53, 46, 210, 28, 255, 225, 329, 39, 299, 46, 5, 11, 1, 0, 0, 0, 0, 0, 0, 0, 0]
 ```
 
+```
 DATA shape:
 X_shape:	 (137861, 20)  (data_numbers, source_sequence_length)
 Y_shape:	 (137861, 25)  (data_numbers, target_sequence_length)
 The size of source dict is : 229
 The size of target dict is : 358
+```
 
 ### Traing Model
 
