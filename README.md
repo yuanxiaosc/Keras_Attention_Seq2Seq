@@ -1,7 +1,12 @@
 # Keras_Attention_Seq2Seq
 
+> In order to understand the essence of things.
+
 A sequence-to-sequence framework of Keras-based generative attention mechanisms that humans can read.
+
 一个人类可以阅读的基于Keras的代注意力机制的序列到序列的框架/模型。
+
+![](attention_mechanism.jpg)
 
 ## Test pass
 + python 3.6
@@ -24,7 +29,10 @@ Then program automatically:
 3. Sequence to Sequence Conversion
 
 **You only need to provide similar generated data and dictionaries to use the model directly**.
+
 Of course, the raw sequence data has to be processed by yourself.
+
+If you don't want to process the data yourself, look down.
 
 ## Framework for Sequence-to-Sequence without Coding
 
