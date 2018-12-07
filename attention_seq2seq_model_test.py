@@ -57,15 +57,21 @@ if __name__=='__main__':
                                                  target_sequence_lenth=target_sequence_lenth,
                                                  encoder_Bi_LSTM_units_numbers=encoder_Bi_LSTM_units_numbers,
                                                  decoder_LSTM_units_numbers=decoder_LSTM_units_numbers)
-    #  加载参数
-    #model.load_weights("Test_model_WEIGHT.h5")
+
 
     # 训练模型
-    model.fit([source_text, decoder_lstm_initial_H_state, decoder_lstm_initial_C_state, decoder_lstm_time0_output],
-              outputs, epochs=2, batch_size=1024)
-    
+    model.fit(source_text,outputs, epochs=1, batch_size=2048)
+
+    #保存模型
+    #model.save("Test_model.h5")
     # 保存参数
     model.save_weights("Test_model_WEIGHT.h5")
+
+    from keras.models import load_model
+    #加载模型
+    #model = load_model('Test_model.h5')
+    #  加载参数
+    model.load_weights("Test_model_WEIGHT.h5")
 
     # 使用模型进行翻译
     translate_tool = Translation(model=model,

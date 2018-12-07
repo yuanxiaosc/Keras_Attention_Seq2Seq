@@ -83,20 +83,13 @@ def load_data_trained_Word_Vector_and_train_model():
                                                 encoder_Bi_LSTM_units_numbers=encoder_Bi_LSTM_units_numbers,
                                                 decoder_LSTM_units_numbers=decoder_LSTM_units_numbers)
 
-    # 初始化解码端LSTM初始化张量
-    seq_numbers = source_text.shape[0]  # 训练样本个数
-    decoder_lstm_initial_H_state = np.zeros((seq_numbers, decoder_LSTM_units_numbers))
-    decoder_lstm_initial_C_state = np.zeros((seq_numbers, decoder_LSTM_units_numbers))
-    decoder_lstm_time0_output = np.zeros((seq_numbers, len(target_vocab_to_int)))
-
     # 把目标序列转换成onehot形式
     target_text_to_onehot = np.array(
         list(map(lambda x: keras.utils.to_categorical(x, num_classes=len(target_vocab_to_int)), target_text)))
     outputs = list(target_text_to_onehot.swapaxes(0, 1))
 
     # 训练模型
-    model.fit([source_text, decoder_lstm_initial_H_state, decoder_lstm_initial_C_state, decoder_lstm_time0_output],
-              outputs, epochs=2, batch_size=1024)
+    model.fit(source_text,outputs, epochs=2, batch_size=1024)
 
     now_time = time.time()
     model_weight_file_name = "WEIGHT_{}.h5".format(model_name)
@@ -132,13 +125,6 @@ def load_data_and_translate_from_scrach():
         list(map(lambda x: keras.utils.to_categorical(x, num_classes=len(target_vocab_to_int)), target_text)))
     outputs = list(target_text_to_onehot.swapaxes(0, 1))
 
-    # 初始化解码端LSTM初始化张量
-    seq_numbers = source_text.shape[0]  # 训练样本个数
-    decoder_lstm_initial_H_state = np.zeros((seq_numbers, decoder_LSTM_units_numbers))
-    decoder_lstm_initial_C_state = np.zeros((seq_numbers, decoder_LSTM_units_numbers))
-    decoder_lstm_time0_output = np.zeros((seq_numbers, len(target_vocab_to_int)))
-
-
     # 获取模型结构和模型名称
     model, model_name = train_model_from_scratch(source_vocab_length=source_vocab_length,
                                                  target_vocab_length=target_vocab_length,
@@ -147,8 +133,7 @@ def load_data_and_translate_from_scrach():
                                                  encoder_Bi_LSTM_units_numbers=encoder_Bi_LSTM_units_numbers,
                                                  decoder_LSTM_units_numbers=decoder_LSTM_units_numbers)
     # 训练模型
-    model.fit([source_text, decoder_lstm_initial_H_state, decoder_lstm_initial_C_state, decoder_lstm_time0_output],
-              outputs, epochs=2, batch_size=1024)
+    model.fit(source_text,outputs, epochs=2, batch_size=1024)
 
     now_time = time.time()
     model_weight_file_name = "WEIGHT_{}.h5".format(model_name)

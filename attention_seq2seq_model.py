@@ -1,4 +1,5 @@
 # 代码参考 https://github.com/NELSONZHAO/zhihu/tree/master/mt_attention_birnn?1527252866900
+# 代码参考 https://github.com/Choco31415/Attention_Network_With_Keras
 # 代码解析参考 https://zhuanlan.zhihu.com/p/37290775
 #
 #
@@ -9,84 +10,54 @@ import keras
 from keras.utils import plot_model
 import numpy as np
 
-
-
-
-class  First_Dim_Softmax(object):
-    # 自定义softmax函数
-    # 因为Keras提供的Softmax函数只对张量的最后一个维度进行计算，这里需要只对第一个维度进行计算
-    def __call__(self,a_tensor, axis=1):
-        """
-        Softmax activation function.
-        """
-        ndim = K.ndim(a_tensor)
-        if ndim == 2:
-            return K.softmax(a_tensor)
-        elif ndim > 2:
-            e = K.exp(a_tensor - K.max(a_tensor, axis=axis, keepdims=True))
-            s = K.sum(e, axis=axis, keepdims=True)
-            return e / s
-        else:
-            raise ValueError('Cannot apply softmax to a tensor that is 1D')
-
-def first_dim_softmax(a_tensor, axis=1):
+def luong_multiplicative_style_attention_mechanism(inputs):
     """
-    Softmax activation function.
+    Attention机制的实现，返回加权后的Context Vector
+    @param encoder_output_sequences: BiRNN的隐层状态  # shape(batch_size, time_step, hidden_size_1)
+    @param s_prev: Decoder端LSTM的上一轮隐层输出  # shape(batch_size, hidden_size_2)
+    Returns:
+    context: 加权后的Context Vector # shape(batch_size,1, hidden_siz_1)
     """
-    ndim = K.ndim(a_tensor)
-    if ndim == 2:
-        return K.softmax(a_tensor)
-    elif ndim > 2:
-        e = K.exp(a_tensor - K.max(a_tensor, axis=axis, keepdims=True))
-        s = K.sum(e, axis=axis, keepdims=True)
-        return e / s
-    else:
-        raise ValueError('Cannot apply softmax to a tensor that is 1D')
+    encoder_output_sequences, s_prev = inputs
+    times_step = K.get_variable_shape(encoder_output_sequences)[1]
+    encoder_output_sequences_hidden_size = K.get_variable_shape(encoder_output_sequences)[2]
+    # 将s_prev复制Tx次
+    s_prev = keras.layers.RepeatVector(times_step)(s_prev)  # shape(batch_size, time_step, hidden_size_2)
+    # 将s_prev维度变为与encoder_output_sequences一样
+    s_prev = keras.layers.Dense(encoder_output_sequences_hidden_size)(
+        s_prev)  # shape(batch_size, time_step, hidden_size_1)
+    # 将s_prev与encoder_output_sequences点积
+    s_prev_multiply_encoder = keras.layers.multiply(
+        [s_prev, encoder_output_sequences])  # shape(batch_size, time_step, hidden_size_1)
+    # 计算energies
+    energies = K.sum(s_prev_multiply_encoder, axis=2, keepdims=True)  # shape(batch_size, time_step, 1)
+    # 计算weights
+    alphas = K.softmax(energies, axis=1)  # shape(batch_size, time_step, 1)
+    # 加权得到Context Vector
+    context = keras.layers.dot([alphas, encoder_output_sequences], axes=1)  # shape(batch_size, 1, hidden_size_1)
+    return context  # shape(batch_size,1, hidden_siz_1)
 
-class Luong_multiplicative_style_Attention_Mechanism(object):
-    """
-     注意力机制参考 Neural Machine Translation (seq2seq) Tutorial https://github.com/tensorflow/nmt
-     Luong's additive style_Attention Mechanism 精要：
-     把解码端状态向量与编码端的状态向量相乘（为了匹配维度中间可能有个矩阵）来算注意力权重大小。
-     """
-
-    pass
-
-class Bahdanau_additive_style_Attention_Mechanism(object):
+def bahdanau_additive_style_attention_mechanism(inputs):
     """
     注意力机制参考 Neural Machine Translation (seq2seq) Tutorial https://github.com/tensorflow/nmt
     Bahdanau's additive style_Attention Mechanism 精要：
     把解码端状态向量与编码端的状态向量先连接再通过前馈神经网络算注意力权重大小。
     """
-    def __init__(self, sequence_time_step,dense_tanh=32):
-        self.repeat = keras.layers.RepeatVector(sequence_time_step)  # shape(batch_size, hidden_size) --> shape(batch_size,Tx, hidden_size)
-        self.concate = keras.layers.Concatenate(axis=-1)
-        self.dense_tanh = keras.layers.Dense(dense_tanh, activation="tanh")
-        self.dense_relu = keras.layers.Dense(1, activation="relu")
-        self.activate = keras.layers.Activation(first_dim_softmax, name='attention_weights')
-        self.dot = keras.layers.Dot(axes=1)
-
-    def __call__(self, encoder_output_sequences, s_prev):
-        """
-        Attention机制的实现，返回加权后的Context Vector
-        @param encoder_output_sequences: BiRNN的隐层状态  # shape(batch_size, time_step, hidden_size_1)
-        @param s_prev: Decoder端LSTM的上一轮隐层输出  # shape(batch_size, hidden_size_2)
-        Returns:
-        context: 加权后的Context Vector # shape(batch_size, hidden_siz_1)
-        """
-        # 将s_prev复制Tx次
-        s_prev = self.repeat(s_prev)  # shape(batch_size, time_step, hidden_size_2)
-        # 拼接BiRNN隐层状态与s_prev
-        concat = self.concate([encoder_output_sequences, s_prev])  # shape(batch_size, time_step, hidden_size_1+ hidden_size_2)
-        # 计算energies
-        e = self.dense_tanh(concat)  # shape(batch_size, time_step, 32)
-        energies = self.dense_relu(e)  # shape(batch_size, time_step, 1)
-        # 计算weights
-        alphas = self.activate(energies)  # shape(batch_size, time_step, 1)
-        # 加权得到Context Vector
-        context = self.dot([alphas, encoder_output_sequences])  # shape(batch_size, 1, hidden_size_1)
-        return context #shape(batch_size, hidden_siz_1)
-
+    encoder_output_sequences, s_prev = inputs
+    times_step = K.get_variable_shape(encoder_output_sequences)[1]
+    encoder_output_sequences_hidden_size = K.get_variable_shape(encoder_output_sequences)[2]
+    # 将s_prev复制Tx次
+    s_prev = keras.layers.RepeatVector(times_step)(s_prev)  # shape(batch_size, time_step, hidden_size_2)
+    # 拼接BiRNN隐层状态与s_prev
+    concat = keras.layers.concatenate([encoder_output_sequences, s_prev],axis=-1)  # shape(batch_size, time_step, hidden_size_1+ hidden_size_2)
+    # 计算energies
+    e = keras.layers.Dense(encoder_output_sequences_hidden_size, activation="tanh")(concat)  # shape(batch_size, time_step, 32)
+    energies = keras.layers.Dense(1, activation="relu")(e)  # shape(batch_size, time_step, 1)
+    # 计算weights
+    alphas = K.softmax(energies, axis=1)  # shape(batch_size, time_step, 1)
+    # 加权得到Context Vector
+    context = keras.layers.dot([alphas, encoder_output_sequences],axes=1)  # shape(batch_size, 1, hidden_size_1)
+    return context  # shape(batch_size, 1,hidden_siz_1)
 
 class Attention_seq2seq(object):
     '''
@@ -145,37 +116,38 @@ class Attention_seq2seq(object):
     def create_model(self, source_sequence_lenth=None, target_sequence_lenth=None,
                      encoder_Bi_LSTM_units_numbers=None,
                      decoder_LSTM_units_numbers=None,
-                     Attention_Mechanism=Bahdanau_additive_style_Attention_Mechanism):
+                     Attention_Mechanism=bahdanau_additive_style_attention_mechanism):
         """
         构造模型
         @param source_sequence_lenth: 输入序列的长度 int
         @param target_sequence_lenth: 输出序列的长度 int
-        @param Attention_Mechanism: 注意力机制 class
+        @param Attention_Mechanism: 注意力机制
         @param encoder_Bi_LSTM_units_numbers:  编码端 Bi-LSTM 的隐藏状态单元个数（默认输出维度会乘2）int
         @param decoder_LSTM_units_numbers:  解码端 LSTM 的隐藏状态单元个数 int
         重要说明：
         encoder_Bi_LSTM_units_numbers 或 decoder_LSTM_units_numbers 若改变，需要重新训练模型！
         """
         embedding_layer = self.pretrained_embedding_layer() #嵌入层
-        one_step_attention = Attention_Mechanism(source_sequence_lenth)  #注意力层
+        one_step_attention = keras.layers.Lambda(Attention_Mechanism)  #注意力层
         reshape = keras.layers.Reshape((1, self.target_vocab_length))
         concate = keras.layers.Concatenate(axis=-1) #连接层
         decoder_LSTM_cell = keras.layers.LSTM(decoder_LSTM_units_numbers, return_state=True) #解码层
-        output_layer = keras.layers.Dense(self.target_vocab_length, activation=first_dim_softmax) #输出层
+        output_layer = keras.layers.Dense(self.target_vocab_length, activation='softmax') #输出层
 
         # 定义输入层
         X = keras.layers.Input(shape=(source_sequence_lenth,))  # shape(batch_size, source_sequence_lenth)
         # Embedding层
         embed = embedding_layer(X)  # shape(batch_size, source_sequence_lenth, embedding_size=100)
 
-        # Decoder端LSTM的初始状态  # shape(batch_size, decoder_LSTM_units_numbers)
-        decoder_lstm_initial_H_state = keras.layers.Input(shape=(decoder_LSTM_units_numbers,),
-                                                       name='decoder_lstm_initial_H_state')
-        decoder_lstm_initial_C_state = keras.layers.Input(shape=(decoder_LSTM_units_numbers,),
-                                                        name='decoder_lstm_initial_C_state')
-
+        # Define the default state for the LSTM layer
+        decoder_lstm_initial_H_state = keras.layers.Lambda(
+            lambda X: K.zeros(shape=(K.shape(X)[0], decoder_LSTM_units_numbers)))(X)
+        decoder_lstm_initial_C_state = keras.layers.Lambda(
+            lambda X: K.zeros(shape=(K.shape(X)[0], decoder_LSTM_units_numbers)))(X)
         # Decoder端LSTM的初始输入 shape(batch_size, target_vocab_size)
-        decoder_lstm_time0_output = keras.layers.Input(shape=(self.target_vocab_length,), name='decoder_lstm_time0_output')
+        decoder_lstm_time0_output = keras.layers.Lambda(
+            lambda X: K.zeros(shape=(K.shape(X)[0], self.target_vocab_length)))(X)
+
         decoder_lstm_output = reshape(decoder_lstm_time0_output)  # shape(batch_size, 1, target_vocab_size)
         decoder_lstm_H_state = decoder_lstm_initial_H_state
         decoder_lstm_C_state = decoder_lstm_initial_C_state
@@ -189,7 +161,7 @@ class Attention_seq2seq(object):
         for t in range(target_sequence_lenth):
             # 获取Context Vector
             # shape(batch_size,1, 2*encoder_Bi_LSTM_units_numbers)
-            attention_encoder_hidden_context = one_step_attention(encoder_output_sequences_hidden_state, decoder_lstm_H_state)
+            attention_encoder_hidden_context = one_step_attention([encoder_output_sequences_hidden_state, decoder_lstm_H_state])
             # 将Context Vector与上一轮的翻译结果进行concat
             # shape(batch_size,1, 2*encoder_Bi_LSTM_units_numbers+target_vocab_size)
             attention_encoder_hidden_context = concate([attention_encoder_hidden_context, reshape(decoder_lstm_output)])
@@ -202,7 +174,7 @@ class Attention_seq2seq(object):
             decoder_lstm_output = output_layer(decoder_lstm_H_state)  # shape(batch_size, target_vocab_size)
             # 存储输出结果
             outputs.append(decoder_lstm_output)
-        model = keras.Model([X, decoder_lstm_initial_H_state, decoder_lstm_initial_C_state, decoder_lstm_time0_output], outputs)
+        model = keras.Model(X,outputs)
         return model
 
 
@@ -225,10 +197,6 @@ class Translation(object):
         :param source_sentence str
         :return: target_sentence str
         '''
-        decoder_lstm_initial_H_state = np.zeros((1, self.decoder_LSTM_units_numbers))
-        decoder_lstm_initial_C_state = np.zeros((1, self.decoder_LSTM_units_numbers))
-        decoder_lstm_time0_output = np.zeros((1, len(self.target_vocab_to_word)))
-
         # 将句子分词后转化为数字编码
         unk_idx = self.source_vocab_to_int["<UNK>"]
         word_idx_list = [self.source_vocab_to_int.get(word, unk_idx) for word in source_sentence.lower().split()]
@@ -236,9 +204,7 @@ class Translation(object):
         word_idx_list = word_idx_list[:self.source_sequence_lenth]
         word_idx_array = np.array(word_idx_list) # shape(source_sequence_lenth,)
         # 翻译结果
-        preds = self.traslation_model.predict([word_idx_array.reshape(-1, self.source_sequence_lenth),
-                                               decoder_lstm_initial_H_state, decoder_lstm_initial_C_state,
-                                               decoder_lstm_time0_output])
+        preds = self.traslation_model.predict(word_idx_array.reshape(-1, self.source_sequence_lenth))
         predictions = np.argmax(preds, axis=-1)
         # 转换为单词
         word_list = [self.target_vocab_to_word.get(idx[0], "<UNK>") for idx in predictions]
@@ -249,10 +215,6 @@ class Translation(object):
 
     def traslate_batch_sentences(self,batch_sentences, delet_PAD=False):
         batch_size = len(batch_sentences)
-        decoder_lstm_initial_H_state = np.zeros((batch_size, self.decoder_LSTM_units_numbers))
-        decoder_lstm_initial_C_state = np.zeros((batch_size, self.decoder_LSTM_units_numbers))
-        decoder_lstm_time0_output = np.zeros((batch_size, len(self.target_vocab_to_word)))
-
         # 将句子分词后转化为数字编码
         unk_idx = self.source_vocab_to_int["<UNK>"]
         source_sentences_list = []
@@ -265,10 +227,7 @@ class Translation(object):
         sentences_array = np.array(source_sentences_list)
         sentences_array = sentences_array.reshape(batch_size, self.source_sequence_lenth)
         # 翻译结果 list 含有 time_step 个  (batch_size, target_vocab_length)
-        preds = self.traslation_model.predict([sentences_array,
-                                               decoder_lstm_initial_H_state,
-                                               decoder_lstm_initial_C_state,
-                                               decoder_lstm_time0_output])
+        preds = self.traslation_model.predict(sentences_array)
 
         predictions = np.stack(preds, axis=0) #shape(time_step, batch_size, target_vocab_length)
         predictions = predictions.swapaxes(0,1) #shape(batch_size,time_step, target_vocab_length)
