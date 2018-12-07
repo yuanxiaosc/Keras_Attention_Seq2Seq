@@ -18,7 +18,41 @@ A sequence-to-sequence framework of Keras-based generative attention mechanisms 
 if you nedd Evaluating model BLEU:
 + nltk
 
-## Fastest Using
+## Fastest Using One: English-French translation using trained models
+```
+python run_seq2seq_model.py
+```
+
+Remember to set the operation mode to translation mode in run_seq2seq_model.py.
+
+```
+if __name__=='__main__':
+
+    is_translation_mode = True
+```
+
+You will see...
+
+```
+Please input your sentences: california is usually quiet during march , and it is usually hot in june .
+california is usually quiet during march , and it is usually hot in june .
+chine est généralement agréable en mois , et il est généralement en en . . <EOS> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD>
+Please input your sentences: china is usually dry during march , but it is nice in november .
+china is usually dry during march , but it is nice in november .
+chine est parfois agréable en mois , et il est généralement en en . . <EOS> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD> <PAD>
+Please input your sentences: exit()
+```
+
+Of course, you can also train your own model.Only you need is:
+
+```
+if __name__=='__main__':
+
+    is_load_data_and_translate_from_scrach = True
+```
+
+
+## Fastest Using Two: View input and output formats and use your own data
 ```
 python attention_seq2seq_model_test.py
 ```
