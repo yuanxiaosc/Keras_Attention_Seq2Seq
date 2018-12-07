@@ -150,3 +150,10 @@ The BLEU score on our corpus is about 0.6051313546590134
 + My blog [望江人工智库](https://yuanxiaosc.github.io/)
 + A simplified version of notebook for this code [mt_attention_birnn](https://github.com/NELSONZHAO/zhihu/tree/master/mt_attention_birnn?1527252866900)
 + 基于Keras框架实现加入Attention与BiRNN的机器翻译模型 [mt_attention_birnn Code explanation](https://zhuanlan.zhihu.com/p/37290775)
++ An example attention network with simple dataset. https://github.com/Choco31415/Attention_Network_With_Keras
+
+## To Do
++ change code for no need input "Manual Initialization of LSTM Initial State at Decoder"
++ add "Forced learning by teachers"
++ add "Beam search"
+
