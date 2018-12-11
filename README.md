@@ -83,17 +83,20 @@ You may need to change the filename.
 For example：
 
 small_vocab_en.txt
+```
 English sentences 0 to 2:
 new jersey is sometimes quiet during autumn , and it is snowy in april .
 the united states is usually chilly during july , and it is usually freezing in november .
 california is usually quiet during march , and it is usually hot in june .
+```
 
 small_vocab_fr.txt
+```
 French sentences 0 to 2:
 new jersey est parfois calme pendant l' automne , et il est neigeux en avril .
 les états-unis est généralement froid en juillet , et il gèle habituellement en novembre .
 california est généralement calme en mars , et il est généralement chaud en juin .
-
+```
 
 ### Preprocessing data files
 
